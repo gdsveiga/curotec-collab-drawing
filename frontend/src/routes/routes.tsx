@@ -9,6 +9,10 @@ const LazyHome = lazy(() => import("src/pages/home"));
 
 const publicRoutes = [
   {
+    path: "/",
+    element: <Navigate to="/login" replace />,
+  },
+  {
     path: "/login",
     element: <LazyLogin />,
   },
