@@ -4,6 +4,7 @@ import { Server } from "socket.io";
 import cors from "cors";
 import dotenv from "dotenv";
 import connectDB from "src/config/db";
+import loginRoutes from "src/routes/login";
 
 dotenv.config();
 
@@ -18,6 +19,8 @@ const io = new Server(server, {
 
 app.use(cors());
 app.use(express.json());
+
+app.use("/api/auth", loginRoutes);
 
 connectDB();
 
