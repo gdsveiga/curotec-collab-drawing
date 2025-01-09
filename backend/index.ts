@@ -5,7 +5,8 @@ import cors from "cors";
 import dotenv from "dotenv";
 import connectDB from "src/config/db";
 import loginRoutes from "src/routes/login";
-import { handleError } from "src/utils/errorHandler";
+import drawingRoutes from "src/routes/drawings";
+import { handleError } from "src/middleware/error";
 
 dotenv.config();
 
@@ -22,6 +23,7 @@ app.use(cors());
 app.use(express.json());
 
 app.use("/api/auth", loginRoutes);
+app.use("/api/drawing", drawingRoutes);
 
 app.use(handleError);
 
