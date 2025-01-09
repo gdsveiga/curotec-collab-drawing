@@ -1,5 +1,6 @@
 import { Stroke } from "src/@types/drawing";
 import { axiosClient } from "src/config/client";
+import { handleError } from "src/utils/handleError";
 
 export type GetDrawingsResponse = {
   createdAt: string;
@@ -14,12 +15,7 @@ export const drawingService = {
       const response = await axiosClient.get("/drawings");
       return response.data;
     } catch (error) {
-      console.error(error);
-      if (error instanceof Error) {
-        throw new Error(error.message);
-      } else {
-        throw new Error(String(error));
-      }
+      return handleError(error);
     }
   },
 };

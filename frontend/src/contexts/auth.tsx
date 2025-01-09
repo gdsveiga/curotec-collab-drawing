@@ -1,4 +1,6 @@
 import React, { createContext, useState, useContext, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
+import { toast } from "react-toastify";
 import { loginService } from "src/services/auth";
 import {
   removeLocalStorageItem,
@@ -22,20 +24,28 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
+  const navigate = useNavigate();
+
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
 
   const login = useCallback(async (username: string, password: string) => {
     const { token, user } = await loginService.login(username, password);
-    setUser(user);
-    setToken(token);
-    setLocalStorageItem("token", token);
+
+    if (token) {
+      setUser(user);
+      setToken(token);
+      setLocalStorageItem("token", token);
+      navigate("/draw/home");
+    }
   }, []);
 
   const logout = useCallback(() => {
     setUser(null);
     setToken(null);
     removeLocalStorageItem("token");
+    navigate("/login");
+    toast.success("Logout successfully");
   }, []);
 
   return (

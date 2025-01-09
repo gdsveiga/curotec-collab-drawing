@@ -7,14 +7,14 @@ import Router from "./routes";
 
 function App() {
   return (
-    <AuthProvider>
-      <BrowserRouter>
+    <BrowserRouter>
+      <AuthProvider>
         <Suspense fallback={<LoadingBar />}>
           <Router />
         </Suspense>
         <ToastContainer />
-      </BrowserRouter>
-    </AuthProvider>
+      </AuthProvider>
+    </BrowserRouter>
   );
 }
 
