@@ -1,11 +1,13 @@
 import { EyeClosed, Eye } from "@phosphor-icons/react/dist/ssr";
 import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import Button from "src/components/shared/button";
 import Input from "src/components/shared/input";
 import { useAuthContext } from "src/contexts/auth";
 
 function Auth() {
   const { login } = useAuthContext();
+  const navigate = useNavigate();
 
   const [username, setUsername] = useState<string>("");
   const [password, setPassword] = useState<string>("");
@@ -52,7 +54,10 @@ function Auth() {
           />
         </div>
       </div>
-      <small className="hover:underline cursor-pointer">
+      <small
+        className="hover:underline cursor-pointer"
+        onClick={() => navigate("/register")}
+      >
         Don't have an account? Register now, it's free!
       </small>
       <div className="mt-4">
