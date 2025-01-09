@@ -1,6 +1,5 @@
 import { authenticate } from "src/middleware/auth";
 import { drawingService } from "src/services/drawing";
-import { handleError } from "src/utils/errorHandler";
 import express from "express";
 
 const router = express.Router();

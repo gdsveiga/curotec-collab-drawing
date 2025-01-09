@@ -1,6 +1,5 @@
 import express from "express";
 import { authService } from "src/services/user";
-import { handleError } from "src/utils/errorHandler";
 
 const router = express.Router();
 
