@@ -7,6 +7,7 @@ import connectDB from "src/config/db";
 import loginRoutes from "src/routes/login";
 import drawingRoutes from "src/routes/drawings";
 import { handleError } from "src/middleware/error";
+import drawingSocket from "src/sockets/drawing";
 
 dotenv.config();
 
@@ -26,6 +27,8 @@ app.use("/api/auth", loginRoutes);
 app.use("/api/drawing", drawingRoutes);
 
 app.use(handleError);
+
+drawingSocket(io);
 
 connectDB();
 
