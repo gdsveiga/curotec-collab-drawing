@@ -2,11 +2,23 @@ import React from "react";
 import { useDrawingContext } from "src/contexts/drawing";
 
 const Canvas: React.FC = () => {
-  const { canvasRef, handleMouseDown, handleMouseMove, handleMouseUp, socket } =
-    useDrawingContext();
+  const {
+    canvasRef,
+    handleMouseDown,
+    handleMouseMove,
+    handleMouseUp,
+    handleTouchStart,
+    handleTouchMove,
+    handleTouchEnd,
+    socket,
+  } = useDrawingContext();
 
   if (!socket) {
-    return <div>Loading...</div>;
+    return (
+      <div className="absolute -top-1/2 -translate-y-1/2 left-1/2 -translate-x-1/2">
+        Loading...
+      </div>
+    );
   }
 
   return (
@@ -16,7 +28,11 @@ const Canvas: React.FC = () => {
       onMouseMove={handleMouseMove}
       onMouseUp={handleMouseUp}
       onMouseOut={handleMouseUp}
-      className=" cursor-crosshair rounded-t-lg"
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
+      onTouchCancel={handleTouchEnd}
+      className="cursor-crosshair"
     ></canvas>
   );
 };

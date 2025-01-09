@@ -4,4 +4,5 @@ export type Stroke = {
   type: "begin" | "draw" | "end";
   strokeSize: number;
   strokeColor: string;
+  userId: string;
 };

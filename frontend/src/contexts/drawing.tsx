@@ -13,6 +13,8 @@ import { drawingService, GetDrawingsResponse } from "src/services/drawing";
 import { useDebounce } from "src/hooks/use-debounce";
 import { simplifyStrokes } from "src/utils/simplify";
 import { Stroke } from "src/@types/drawing";
+import { useAuthContext } from "./auth";
+import { generateRandomColor } from "src/utils/colors";
 
 type DrawingContextType = {
   strokeSize: number;
@@ -24,6 +26,9 @@ type DrawingContextType = {
   handleMouseDown: (event: React.MouseEvent) => void;
   handleMouseMove: (event: React.MouseEvent) => void;
   handleMouseUp: () => void;
+  handleTouchStart: (event: React.TouchEvent) => void;
+  handleTouchMove: (event: React.TouchEvent) => void;
+  handleTouchEnd: () => void;
   handleUndo: () => void;
   handleRedo: () => void;
   canUndo: boolean;
@@ -47,7 +52,7 @@ export const DrawingProvider: React.FC<{ children: ReactNode }> = ({
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isDrawing, setIsDrawing] = useState(false);
   const [strokes, setStrokes] = useState<Stroke[]>([]);
-  const [strokeColor, setStrokeColor] = useState("#000000");
+  const [strokeColor, setStrokeColor] = useState(generateRandomColor());
   const [strokeSize, setStrokeSize] = useState(2);
 
   const [allStrokes, setAllStrokes] = useState<Stroke[][]>([]);
@@ -59,6 +64,8 @@ export const DrawingProvider: React.FC<{ children: ReactNode }> = ({
   const canRedo = useMemo(() => redoStack.length > 0, [redoStack]);
 
   const socket: Socket | null = useSocket();
+
+  const { user } = useAuthContext();
 
   useEffect(() => {
     if (!socket) {
@@ -97,7 +104,7 @@ export const DrawingProvider: React.FC<{ children: ReactNode }> = ({
     socket.emit("saveDrawing", { strokes });
   };
 
-  const debouncedSaveDrawing = useDebounce(saveDrawing, 500);
+  const debouncedSaveDrawing = useDebounce(saveDrawing, 300);
 
   const setCanvasSize = () => {
     const canvas = canvasRef.current;
@@ -107,7 +114,7 @@ export const DrawingProvider: React.FC<{ children: ReactNode }> = ({
 
       const ctx = canvas.getContext("2d");
       if (ctx) {
-        ctx.fillStyle = "white";
+        ctx.fillStyle = "#fbfff1";
         ctx.fillRect(0, 0, canvas.width, canvas.height);
       }
     }
@@ -160,29 +167,9 @@ export const DrawingProvider: React.FC<{ children: ReactNode }> = ({
     );
   };
 
-  const handleUndo = () => {
-    if (!canUndo) return;
+  const handleUndo = () => {};
 
-    setAllStrokes((prev) => {
-      const lastStrokes = prev[prev.length - 1];
-      setRedoStack((redo) => [lastStrokes, ...redo]);
-      return prev.slice(0, -1);
-    });
-
-    redrawCanvas();
-  };
-
-  const handleRedo = () => {
-    if (!canRedo) return;
-
-    setRedoStack((prev) => {
-      const lastRedo = prev[0];
-      setAllStrokes((strokes) => [...strokes, lastRedo]);
-      return prev.slice(1);
-    });
-
-    redrawCanvas();
-  };
+  const handleRedo = () => {};
 
   const emitStroke = (x: number, y: number, type: "begin" | "draw" | "end") => {
     if (!socket) return;
@@ -193,10 +180,74 @@ export const DrawingProvider: React.FC<{ children: ReactNode }> = ({
       type,
       strokeSize,
       strokeColor,
+      userId: user!.id,
     };
 
     socket.emit("draw", strokeData);
     setStrokes((prevStrokes) => simplifyStrokes([...prevStrokes, strokeData]));
+  };
+
+  const getTouchPosition = (event: React.TouchEvent) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return { x: 0, y: 0 };
+
+    const rect = canvas.getBoundingClientRect();
+    const touch = event.touches[0];
+
+    return {
+      x: touch.clientX - rect.left,
+      y: touch.clientY - rect.top,
+    };
+  };
+
+  const handleTouchStart = (event: React.TouchEvent) => {
+    if (!socket || !canvasRef.current) return;
+
+    const canvas = canvasRef.current;
+    const ctx = canvas.getContext("2d");
+    if (ctx) {
+      setIsDrawing(true);
+      const { x, y } = getTouchPosition(event);
+
+      ctx.lineWidth = strokeSize;
+      ctx.strokeStyle = strokeColor;
+      ctx.beginPath();
+      ctx.moveTo(x, y);
+
+      emitStroke(x, y, "begin");
+    }
+  };
+
+  const handleTouchMove = (event: React.TouchEvent) => {
+    if (!isDrawing || !socket || !canvasRef.current) return;
+
+    const canvas = canvasRef.current;
+    const ctx = canvas.getContext("2d");
+    if (ctx) {
+      const { x, y } = getTouchPosition(event);
+
+      ctx.lineWidth = strokeSize;
+      ctx.strokeStyle = strokeColor;
+      ctx.lineTo(x, y);
+      ctx.stroke();
+
+      emitStroke(x, y, "draw");
+    }
+  };
+
+  const handleTouchEnd = () => {
+    if (!socket || !isDrawing) return;
+
+    setIsDrawing(false);
+
+    if (canvasRef.current) {
+      const ctx = canvasRef.current.getContext("2d");
+      if (ctx) {
+        ctx.closePath();
+        emitStroke(0, 0, "end");
+        saveDrawing();
+      }
+    }
   };
 
   const handleMouseDown = (event: React.MouseEvent) => {
@@ -271,6 +322,9 @@ export const DrawingProvider: React.FC<{ children: ReactNode }> = ({
         handleMouseDown,
         handleMouseMove,
         handleMouseUp,
+        handleTouchStart,
+        handleTouchMove,
+        handleTouchEnd,
         handleUndo,
         handleRedo,
         canUndo,
