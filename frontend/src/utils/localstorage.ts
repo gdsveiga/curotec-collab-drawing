@@ -1,9 +1,21 @@
 export const getLocalStorageItem = (key: string) => {
-  return localStorage.getItem(import.meta.env.VITE_LOCAL_STORAGE_PREFIX + key);
+  const item = localStorage.getItem(
+    import.meta.env.VITE_LOCAL_STORAGE_PREFIX + key
+  );
+  try {
+    return item ? JSON.parse(item) : null;
+  } catch {
+    return item;
+  }
 };
 
-export const setLocalStorageItem = (key: string, value: string) => {
-  localStorage.setItem(import.meta.env.VITE_LOCAL_STORAGE_PREFIX + key, value);
+export const setLocalStorageItem = (key: string, value: any) => {
+  const serializedValue =
+    typeof value === "string" ? value : JSON.stringify(value);
+  localStorage.setItem(
+    import.meta.env.VITE_LOCAL_STORAGE_PREFIX + key,
+    serializedValue
+  );
 };
 
 export const removeLocalStorageItem = (key: string) => {

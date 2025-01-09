@@ -11,12 +11,14 @@ export function simplifyStrokes(strokes: Stroke[]) {
     const originalStroke = strokes.find(
       (s) => s.x === point.x && s.y === point.y
     );
+
     return {
       x: point.x,
       y: point.y,
       type: index === 0 ? "begin" : "draw",
       strokeSize: originalStroke?.strokeSize || 2,
       strokeColor: originalStroke?.strokeColor || "#000000",
+      userId: originalStroke?.userId || "",
     };
   });
 
