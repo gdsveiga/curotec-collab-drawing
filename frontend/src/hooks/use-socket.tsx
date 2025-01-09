@@ -11,12 +11,10 @@ const useSocket = (): Socket | null => {
     socketRef.current = socket;
 
     socket.on("connect", () => {
-      console.log("Socket connected:", socket.id);
       setIsSocketInitialized(true);
     });
 
     socket.on("disconnect", () => {
-      console.log("Socket disconnected");
       setIsSocketInitialized(false);
     });
 
