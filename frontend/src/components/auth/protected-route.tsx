@@ -9,7 +9,6 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({
   const { token } = useAuthContext();
 
   if (!token) {
-    toast.error("You need to be logged in to access this page");
     return <Navigate to="/login" replace />;
   }
 
