@@ -3,7 +3,7 @@ import { Navigate } from "react-router-dom";
 import PublicLayout from "src/layout/public";
 import ProtectedLayout from "src/layout/protected";
 
-// const LazyRegister = lazy(() => import("src/pages/register"));
+const LazyRegister = lazy(() => import("src/pages/register"));
 const LazyLogin = lazy(() => import("src/pages/login"));
 const LazyHome = lazy(() => import("src/pages/home"));
 
@@ -16,10 +16,10 @@ const publicRoutes = [
     path: "/login",
     element: <LazyLogin />,
   },
-  // {
-  //   path: "/register",
-  //   element: <LazyRegister />,
-  // },
+  {
+    path: "/register",
+    element: <LazyRegister />,
+  },
 ];
 const protectedRoutes = [
   {
