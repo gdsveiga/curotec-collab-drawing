@@ -24,7 +24,7 @@ app.use(cors());
 app.use(express.json());
 
 app.use("/api/auth", loginRoutes);
-app.use("/api/drawing", drawingRoutes);
+app.use("/api/drawings", drawingRoutes);
 
 app.use(handleError);
 
