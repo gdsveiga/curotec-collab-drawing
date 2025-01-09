@@ -9,7 +9,7 @@ export const authService = {
 
     const user = new User({ username, password });
     await user.save();
-    return user;
+    return { id: user._id, username: user.username };
   },
 
   async login(username: string, password: string) {
@@ -21,7 +21,7 @@ export const authService = {
     const token = jwt.sign({ userId: user._id }, config.jwtSecret, {
       expiresIn: config.jwtExpiry,
     });
-    return { token, user };
+    return { token, user: { id: user._id, username: user.username } };
   },
 
   async verifyToken(token: string) {

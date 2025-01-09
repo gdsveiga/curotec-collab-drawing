@@ -6,6 +6,7 @@ interface IStroke {
   type: "begin" | "draw" | "end";
   strokeSize: number;
   strokeColor: string;
+  userId: string;
 }
 
 export interface IDrawing extends Document {
@@ -19,6 +20,7 @@ const strokeSchema = new Schema<IStroke>({
   type: { type: String, enum: ["begin", "draw", "end"], required: true },
   strokeSize: { type: Number, required: true },
   strokeColor: { type: String, required: true },
+  userId: { type: String, required: true },
 });
 
 const drawingSchema = new Schema<IDrawing>({
