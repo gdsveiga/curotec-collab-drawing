@@ -34,6 +34,7 @@ type DrawingContextType = {
   canUndo: boolean;
   canRedo: boolean;
   clearCanvas: () => void;
+  downloadCanvas: () => void;
 };
 
 const DrawingContext = createContext<DrawingContextType | undefined>(undefined);
@@ -55,12 +56,14 @@ export const DrawingProvider: React.FC<{ children: ReactNode }> = ({
   const [strokeColor, setStrokeColor] = useState(generateRandomColor());
   const [strokeSize, setStrokeSize] = useState(2);
 
-  const [allStrokes, setAllStrokes] = useState<Stroke[][]>([]);
+  const [myDrawings, setMyDrawings] = useState<Stroke[][]>([]);
+  const [userDrawings, setUserDrawings] = useState<{
+    [id: string]: Stroke[][];
+  } | null>(null);
 
-  const [undoStack, setUndoStack] = useState<Stroke[][]>([]);
   const [redoStack, setRedoStack] = useState<Stroke[][]>([]);
 
-  const canUndo = useMemo(() => undoStack.length > 0, [undoStack]);
+  const canUndo = useMemo(() => myDrawings.length > 0, [myDrawings]);
   const canRedo = useMemo(() => redoStack.length > 0, [redoStack]);
 
   const socket: Socket | null = useSocket();
@@ -73,14 +76,62 @@ export const DrawingProvider: React.FC<{ children: ReactNode }> = ({
       return;
     }
 
-    setCanvasSize();
-    window.addEventListener("resize", setCanvasSize);
+    socket.on("draw", (data) => {
+      drawLogic(data);
+    });
+    socket.on("saveDrawing", (data) => {
+      setUserDrawings((prev) => {
+        return {
+          ...prev,
+          [data.userId]: [
+            ...(prev?.[data.userId] || []),
+            data.strokes.map((s: Stroke) => ({ ...s, id: data.id })),
+          ],
+        };
+      });
+    });
+    socket.on("undo", (data) => {
+      const updatedUserDrawings: { [id: string]: Stroke[][] } = {
+        ...userDrawings,
+        [data.userId]:
+          userDrawings?.[data.userId]?.filter(
+            (_, index) => index !== data.drawingId
+          ) || [],
+      };
 
-    socket.on("draw", handleDrawFromServer);
+      setUserDrawings(updatedUserDrawings);
+      if (!socket || !canvasRef.current) return;
+
+      const canvas = canvasRef.current;
+      const ctx = canvas.getContext("2d");
+      if (ctx) {
+        ctx.fillStyle = "#fbfff1";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+      }
+
+      console.log("cleaning Canvas");
+
+      Object.values(updatedUserDrawings).map((userAllDrawings: Stroke[][]) =>
+        userAllDrawings.map((drawing: Stroke[]) =>
+          drawing.map((stroke) => drawLogic(stroke))
+        )
+      );
+    });
+    socket.on("clearCanvas", () => {
+      if (!socket || !canvasRef.current) return;
+
+      const canvas = canvasRef.current;
+      const ctx = canvas.getContext("2d");
+      if (ctx) {
+        ctx.fillStyle = "#fbfff1";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+      }
+
+      console.log("cleaning Canvas");
+    });
 
     return () => {
-      window.removeEventListener("resize", setCanvasSize);
-      socket.off("draw", handleDrawFromServer);
+      socket.off("draw", drawLogic);
     };
   }, [socket]);
 
@@ -88,20 +139,45 @@ export const DrawingProvider: React.FC<{ children: ReactNode }> = ({
     const fetchDrawings = async () => {
       try {
         const drawings = await drawingService.getDrawings();
-        setAllStrokes(drawings.map((d) => d.strokes));
+
+        drawings.forEach((drawing) => {
+          if (drawing.userId === user!.id) {
+            setMyDrawings((prev) => [
+              ...prev,
+              drawing.strokes.map((s) => ({ ...s, id: drawing._id })),
+            ]);
+          } else {
+            setUserDrawings((prev) => ({
+              ...prev,
+              [drawing.userId]: [
+                ...(prev?.[drawing.userId] || []),
+                drawing.strokes.map((s: Stroke) => ({ ...s, id: drawing._id })),
+              ],
+            }));
+          }
+        });
+
         drawPreviousStrokes(drawings);
       } catch (error) {
         console.error("Failed to load drawings", error);
       }
     };
 
-    fetchDrawings();
-  }, []);
+    setCanvasSize();
+
+    window.addEventListener("resize", setCanvasSize);
+
+    setTimeout(() => fetchDrawings(), 100);
+
+    return () => {
+      window.removeEventListener("resize", setCanvasSize);
+    };
+  }, [canvasRef.current]);
 
   const saveDrawing = () => {
     if (!socket || strokes.length === 0) return;
 
-    socket.emit("saveDrawing", { strokes });
+    socket.emit("saveDrawing", { userId: user!.id, strokes });
   };
 
   const debouncedSaveDrawing = useDebounce(saveDrawing, 300);
@@ -142,11 +218,8 @@ export const DrawingProvider: React.FC<{ children: ReactNode }> = ({
     }
   };
 
-  const handleDrawFromServer = (data: Stroke) => {
-    drawLogic(data);
-  };
-
   const drawPreviousStrokes = (drawings: GetDrawingsResponse[]) => {
+    console.log("desenhando do server", drawings);
     drawings.forEach((drawing) => {
       drawing.strokes.forEach((stroke) => {
         drawLogic(stroke);
@@ -154,32 +227,49 @@ export const DrawingProvider: React.FC<{ children: ReactNode }> = ({
     });
   };
 
-  const redrawCanvas = () => {
+  const handleUndo = () => {
+    const lastDrawing = myDrawings[myDrawings.length - 1];
+    const updatedDrawings = myDrawings.slice(0, -1);
+
+    setRedoStack((prev) => [...prev, lastDrawing]);
+    setMyDrawings(updatedDrawings);
+
+    if (!socket || !canvasRef.current) return;
+
     const canvas = canvasRef.current;
-    if (!canvas) return;
-
     const ctx = canvas.getContext("2d");
-    if (!ctx) return;
+    if (ctx) {
+      ctx.fillStyle = "#fbfff1";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+    }
 
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    allStrokes.forEach((strokesGroup) =>
-      strokesGroup.forEach((stroke) => drawLogic(stroke))
+    console.log("cleaning Canvas");
+
+    updatedDrawings.forEach((strokes) =>
+      strokes.forEach((stroke) => drawLogic(stroke))
     );
+
+    socket.emit("undo", { id: lastDrawing[0].id, userId: user!.id });
   };
 
-  const handleUndo = () => {};
+  const handleRedo = () => {
+    console.log(redoStack);
+    const undoDrawing = redoStack[redoStack.length - 1];
 
-  const handleRedo = () => {};
+    setRedoStack((prev) => prev.slice(0, -1));
+    setMyDrawings((prev) => [...prev, undoDrawing]);
 
-  const emitStroke = (x: number, y: number, type: "begin" | "draw" | "end") => {
+    undoDrawing.map((stroke) => {
+      emitStroke(stroke);
+      drawLogic(stroke);
+    });
+  };
+
+  const emitStroke = (stroke: Stroke) => {
     if (!socket) return;
 
     const strokeData: Stroke = {
-      x,
-      y,
-      type,
-      strokeSize,
-      strokeColor,
+      ...stroke,
       userId: user!.id,
     };
 
@@ -214,7 +304,14 @@ export const DrawingProvider: React.FC<{ children: ReactNode }> = ({
       ctx.beginPath();
       ctx.moveTo(x, y);
 
-      emitStroke(x, y, "begin");
+      emitStroke({
+        x,
+        y,
+        type: "begin",
+        strokeColor,
+        strokeSize,
+        userId: user!.id,
+      });
     }
   };
 
@@ -231,7 +328,14 @@ export const DrawingProvider: React.FC<{ children: ReactNode }> = ({
       ctx.lineTo(x, y);
       ctx.stroke();
 
-      emitStroke(x, y, "draw");
+      emitStroke({
+        x,
+        y,
+        type: "draw",
+        strokeColor,
+        strokeSize,
+        userId: user!.id,
+      });
     }
   };
 
@@ -244,8 +348,15 @@ export const DrawingProvider: React.FC<{ children: ReactNode }> = ({
       const ctx = canvasRef.current.getContext("2d");
       if (ctx) {
         ctx.closePath();
-        emitStroke(0, 0, "end");
-        saveDrawing();
+        emitStroke({
+          x: 0,
+          y: 0,
+          type: "end",
+          strokeColor,
+          strokeSize,
+          userId: user!.id,
+        });
+        debouncedSaveDrawing();
       }
     }
   };
@@ -264,7 +375,14 @@ export const DrawingProvider: React.FC<{ children: ReactNode }> = ({
       ctx.beginPath();
       ctx.moveTo(clientX, clientY);
 
-      emitStroke(clientX, clientY, "begin");
+      emitStroke({
+        x: clientX,
+        y: clientY,
+        type: "begin",
+        strokeColor,
+        strokeSize,
+        userId: user!.id,
+      });
     }
   };
 
@@ -281,7 +399,14 @@ export const DrawingProvider: React.FC<{ children: ReactNode }> = ({
       ctx.lineTo(clientX, clientY);
       ctx.stroke();
 
-      emitStroke(clientX, clientY, "draw");
+      emitStroke({
+        x: clientX,
+        y: clientY,
+        type: "draw",
+        strokeColor,
+        strokeSize,
+        userId: user!.id,
+      });
     }
   };
 
@@ -289,11 +414,24 @@ export const DrawingProvider: React.FC<{ children: ReactNode }> = ({
     if (!isDrawing) return;
     setIsDrawing(false);
 
+    if (canvasRef.current) {
+      const ctx = canvasRef.current.getContext("2d");
+      if (ctx) {
+        emitStroke({
+          x: 0,
+          y: 0,
+          type: "end",
+          strokeColor,
+          strokeSize,
+          userId: user!.id,
+        });
+        debouncedSaveDrawing();
+      }
+    }
+
     if (strokes.length > 0) {
-      setAllStrokes((prev) => [...prev, strokes]);
-      setUndoStack((prev) => [strokes, ...prev]);
+      setMyDrawings((prev) => [...prev, strokes]);
       setStrokes([]);
-      setRedoStack([]);
       debouncedSaveDrawing();
     }
   };
@@ -304,10 +442,26 @@ export const DrawingProvider: React.FC<{ children: ReactNode }> = ({
     const canvas = canvasRef.current;
     const ctx = canvas.getContext("2d");
     if (ctx) {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = "#fbfff1";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
     }
 
+    setMyDrawings([]);
+    setUserDrawings(null);
+    setStrokes([]);
+    setRedoStack([]);
+
     socket.emit("clearCanvas");
+  };
+
+  const downloadCanvas = async () => {
+    const url = await drawingService.download();
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `canvas.png`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   return (
@@ -330,6 +484,7 @@ export const DrawingProvider: React.FC<{ children: ReactNode }> = ({
         canUndo,
         canRedo,
         clearCanvas,
+        downloadCanvas,
       }}
     >
       {children}
