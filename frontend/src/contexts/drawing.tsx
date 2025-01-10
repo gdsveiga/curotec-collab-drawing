@@ -75,8 +75,6 @@ export const DrawingProvider: React.FC<{ children: ReactNode }> = ({
 
   const { user } = useAuthContext();
 
-  console.log(onlineUsers);
-
   useEffect(() => {
     if (!socket) {
       console.warn("Socket is not initialized.");
@@ -84,7 +82,6 @@ export const DrawingProvider: React.FC<{ children: ReactNode }> = ({
     }
 
     socket.on("userStatusChanged", (data) => {
-      console.log(data);
       setOnlineUsers((prevUsers) => {
         if (data.status === "online") {
           return [...prevUsers, data];
@@ -359,8 +356,8 @@ export const DrawingProvider: React.FC<{ children: ReactNode }> = ({
 
     if (canvasRef.current) {
       const ctx = canvasRef.current.getContext("2d");
+
       if (ctx) {
-        ctx.closePath();
         emitStroke({
           x: 0,
           y: 0,
@@ -369,6 +366,11 @@ export const DrawingProvider: React.FC<{ children: ReactNode }> = ({
           strokeSize,
           userId: user!.id,
         });
+      }
+
+      if (strokes.length > 0) {
+        setMyDrawings((prev) => [...prev, strokes]);
+        setStrokes([]);
         debouncedSaveDrawing();
       }
     }
@@ -438,7 +440,6 @@ export const DrawingProvider: React.FC<{ children: ReactNode }> = ({
           strokeSize,
           userId: user!.id,
         });
-        debouncedSaveDrawing();
       }
     }
 
