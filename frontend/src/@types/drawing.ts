@@ -5,4 +5,5 @@ export type Stroke = {
   strokeSize: number;
   strokeColor: string;
   userId: string;
+  id?: string;
 };
