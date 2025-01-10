@@ -15,7 +15,7 @@
     "@types/node": "^22.10.5",
     "@types/socket.io": "^3.0.2",
     "bcrypt": "^5.1.1",
-    "canvas-renderer": "^2.2.1",
+    "canvas": "^3.0.1",
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
