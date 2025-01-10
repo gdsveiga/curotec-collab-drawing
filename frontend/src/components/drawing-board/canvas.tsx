@@ -32,7 +32,7 @@ const Canvas: React.FC = () => {
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
       onTouchCancel={handleTouchEnd}
-      className="cursor-crosshair"
+      className="cursor-crosshair touch-none"
     ></canvas>
   );
 };
