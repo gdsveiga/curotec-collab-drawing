@@ -35,6 +35,7 @@ type DrawingContextType = {
   canRedo: boolean;
   clearCanvas: () => void;
   downloadCanvas: () => void;
+  onlineUsers: { id: string; username: string }[];
 };
 
 const DrawingContext = createContext<DrawingContextType | undefined>(undefined);
@@ -63,6 +64,10 @@ export const DrawingProvider: React.FC<{ children: ReactNode }> = ({
 
   const [redoStack, setRedoStack] = useState<Stroke[][]>([]);
 
+  const [onlineUsers, setOnlineUsers] = useState<
+    { id: string; username: string }[]
+  >([]);
+
   const canUndo = useMemo(() => myDrawings.length > 0, [myDrawings]);
   const canRedo = useMemo(() => redoStack.length > 0, [redoStack]);
 
@@ -70,15 +75,29 @@ export const DrawingProvider: React.FC<{ children: ReactNode }> = ({
 
   const { user } = useAuthContext();
 
+  console.log(onlineUsers);
+
   useEffect(() => {
     if (!socket) {
       console.warn("Socket is not initialized.");
       return;
     }
 
+    socket.on("userStatusChanged", (data) => {
+      console.log(data);
+      setOnlineUsers((prevUsers) => {
+        if (data.status === "online") {
+          return [...prevUsers, data];
+        } else {
+          return prevUsers.filter((user) => user.id !== data.userId);
+        }
+      });
+    });
+
     socket.on("draw", (data) => {
       drawLogic(data);
     });
+
     socket.on("saveDrawing", (data) => {
       setUserDrawings((prev) => {
         return {
@@ -90,6 +109,7 @@ export const DrawingProvider: React.FC<{ children: ReactNode }> = ({
         };
       });
     });
+
     socket.on("undo", (data) => {
       const updatedUserDrawings: { [id: string]: Stroke[][] } = {
         ...userDrawings,
@@ -109,14 +129,13 @@ export const DrawingProvider: React.FC<{ children: ReactNode }> = ({
         ctx.fillRect(0, 0, canvas.width, canvas.height);
       }
 
-      console.log("cleaning Canvas");
-
       Object.values(updatedUserDrawings).map((userAllDrawings: Stroke[][]) =>
         userAllDrawings.map((drawing: Stroke[]) =>
           drawing.map((stroke) => drawLogic(stroke))
         )
       );
     });
+
     socket.on("clearCanvas", () => {
       if (!socket || !canvasRef.current) return;
 
@@ -126,8 +145,6 @@ export const DrawingProvider: React.FC<{ children: ReactNode }> = ({
         ctx.fillStyle = "#fbfff1";
         ctx.fillRect(0, 0, canvas.width, canvas.height);
       }
-
-      console.log("cleaning Canvas");
     });
 
     return () => {
@@ -219,7 +236,6 @@ export const DrawingProvider: React.FC<{ children: ReactNode }> = ({
   };
 
   const drawPreviousStrokes = (drawings: GetDrawingsResponse[]) => {
-    console.log("desenhando do server", drawings);
     drawings.forEach((drawing) => {
       drawing.strokes.forEach((stroke) => {
         drawLogic(stroke);
@@ -243,8 +259,6 @@ export const DrawingProvider: React.FC<{ children: ReactNode }> = ({
       ctx.fillRect(0, 0, canvas.width, canvas.height);
     }
 
-    console.log("cleaning Canvas");
-
     updatedDrawings.forEach((strokes) =>
       strokes.forEach((stroke) => drawLogic(stroke))
     );
@@ -253,7 +267,6 @@ export const DrawingProvider: React.FC<{ children: ReactNode }> = ({
   };
 
   const handleRedo = () => {
-    console.log(redoStack);
     const undoDrawing = redoStack[redoStack.length - 1];
 
     setRedoStack((prev) => prev.slice(0, -1));
@@ -485,6 +498,7 @@ export const DrawingProvider: React.FC<{ children: ReactNode }> = ({
         canRedo,
         clearCanvas,
         downloadCanvas,
+        onlineUsers,
       }}
     >
       {children}

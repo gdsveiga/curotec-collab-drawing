@@ -10,6 +10,7 @@ interface IUser extends Document {
 const userSchema = new mongoose.Schema({
   username: { type: String, required: true, unique: true },
   password: { type: String, required: true },
+  status: { type: String, enum: ["online", "offline"], default: "offline" },
 });
 
 userSchema.pre("save", async function (next) {
