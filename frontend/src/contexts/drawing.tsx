@@ -1,4 +1,4 @@
-import {
+import React, {
   createContext,
   useState,
   useContext,
@@ -28,7 +28,7 @@ type DrawingContextType = {
   handleMouseUp: () => void;
   handleTouchStart: (event: React.TouchEvent) => void;
   handleTouchMove: (event: React.TouchEvent) => void;
-  handleTouchEnd: () => void;
+  handleTouchEnd: (event: React.TouchEvent) => void;
   handleUndo: () => void;
   handleRedo: () => void;
   canUndo: boolean;
@@ -303,6 +303,8 @@ export const DrawingProvider: React.FC<{ children: ReactNode }> = ({
   const handleTouchStart = (event: React.TouchEvent) => {
     if (!socket || !canvasRef.current) return;
 
+    event.preventDefault();
+
     const canvas = canvasRef.current;
     const ctx = canvas.getContext("2d");
     if (ctx) {
@@ -328,6 +330,8 @@ export const DrawingProvider: React.FC<{ children: ReactNode }> = ({
   const handleTouchMove = (event: React.TouchEvent) => {
     if (!isDrawing || !socket || !canvasRef.current) return;
 
+    event.preventDefault();
+
     const canvas = canvasRef.current;
     const ctx = canvas.getContext("2d");
     if (ctx) {
@@ -349,8 +353,10 @@ export const DrawingProvider: React.FC<{ children: ReactNode }> = ({
     }
   };
 
-  const handleTouchEnd = () => {
+  const handleTouchEnd = (event: React.TouchEvent) => {
     if (!socket || !isDrawing) return;
+
+    event.preventDefault();
 
     setIsDrawing(false);
 
