@@ -15,7 +15,7 @@ function Auth() {
   const [isPasswordVisible, setIsPasswordVisible] = useState<boolean>(false);
 
   return (
-    <div className="max-w-md w-full mx-auto py-4 px-8 rounded-md shadow-md bg-grass-500 text-grass-800">
+    <div className="lg:max-w-md w-full lg:mx-auto mx-4 py-4 px-8 rounded-md shadow-md bg-grass-500 text-grass-800">
       <h2 className="text-2xl leading-none">Welcome</h2>
       <small>Please, enter your username and password below</small>
       <div className="flex flex-col mt-4 gap-2">
