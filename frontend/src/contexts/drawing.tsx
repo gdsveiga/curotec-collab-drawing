@@ -153,37 +153,6 @@ export const DrawingProvider: React.FC<{ children: ReactNode }> = ({
   }, [socket]);
 
   useEffect(() => {
-    const fetchDrawings = async () => {
-      try {
-        const drawings = await drawingService.getDrawings();
-
-        drawings.forEach((drawing) => {
-          if (drawing.userId === user!.id) {
-            setMyDrawings((prev) => [
-              ...prev,
-              drawing.strokes.map((s) => ({ ...s, id: drawing._id })),
-            ]);
-          } else {
-            setUserDrawings((prev) => ({
-              ...prev,
-              [drawing.userId]: [
-                ...(prev?.[drawing.userId] || []),
-                drawing.strokes.map((s: Stroke) => ({ ...s, id: drawing._id })),
-              ],
-            }));
-          }
-        });
-
-        drawPreviousStrokes(drawings);
-      } catch (error) {
-        console.error("Failed to load drawings", error);
-      }
-    };
-
-    fetchDrawings();
-  }, []);
-
-  useEffect(() => {
     window.addEventListener("resize", setCanvasSize);
 
     setCanvasSize();
@@ -192,6 +161,33 @@ export const DrawingProvider: React.FC<{ children: ReactNode }> = ({
       window.removeEventListener("resize", setCanvasSize);
     };
   }, [canvasRef.current, socket]);
+
+  const fetchDrawings = async () => {
+    try {
+      const drawings = await drawingService.getDrawings();
+
+      drawings.forEach((drawing) => {
+        if (drawing.userId === user!.id) {
+          setMyDrawings((prev) => [
+            ...prev,
+            drawing.strokes.map((s) => ({ ...s, id: drawing._id })),
+          ]);
+        } else {
+          setUserDrawings((prev) => ({
+            ...prev,
+            [drawing.userId]: [
+              ...(prev?.[drawing.userId] || []),
+              drawing.strokes.map((s: Stroke) => ({ ...s, id: drawing._id })),
+            ],
+          }));
+        }
+      });
+
+      drawPreviousStrokes(drawings);
+    } catch (error) {
+      console.error("Failed to load drawings", error);
+    }
+  };
 
   const saveDrawing = () => {
     if (!socket || strokes.length === 0) return;
@@ -212,6 +208,8 @@ export const DrawingProvider: React.FC<{ children: ReactNode }> = ({
         ctx.fillStyle = "#fbfff1";
         ctx.fillRect(0, 0, canvas.width, canvas.height);
       }
+
+      fetchDrawings();
     }
   };
 
