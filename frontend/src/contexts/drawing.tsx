@@ -142,6 +142,11 @@ export const DrawingProvider: React.FC<{ children: ReactNode }> = ({
         ctx.fillStyle = "#fbfff1";
         ctx.fillRect(0, 0, canvas.width, canvas.height);
       }
+
+      setMyDrawings([]);
+      setUserDrawings(null);
+      setStrokes([]);
+      setRedoStack([]);
     });
 
     return () => {
