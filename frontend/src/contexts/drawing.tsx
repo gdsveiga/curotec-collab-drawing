@@ -180,16 +180,18 @@ export const DrawingProvider: React.FC<{ children: ReactNode }> = ({
       }
     };
 
-    setCanvasSize();
+    fetchDrawings();
+  }, []);
 
+  useEffect(() => {
     window.addEventListener("resize", setCanvasSize);
 
-    setTimeout(() => fetchDrawings(), 100);
+    setCanvasSize();
 
     return () => {
       window.removeEventListener("resize", setCanvasSize);
     };
-  }, [canvasRef.current]);
+  }, [canvasRef.current, socket]);
 
   const saveDrawing = () => {
     if (!socket || strokes.length === 0) return;
@@ -385,8 +387,8 @@ export const DrawingProvider: React.FC<{ children: ReactNode }> = ({
 
       ctx.lineWidth = strokeSize;
       ctx.strokeStyle = strokeColor;
-      ctx.beginPath();
       ctx.moveTo(clientX, clientY);
+      ctx.beginPath();
 
       emitStroke({
         x: clientX,
