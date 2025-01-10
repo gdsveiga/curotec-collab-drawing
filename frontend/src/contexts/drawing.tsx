@@ -48,6 +48,8 @@ export const useDrawingContext = () => {
   return context;
 };
 
+const contextMap: Record<string, CanvasRenderingContext2D | null> = {};
+
 export const DrawingProvider: React.FC<{ children: ReactNode }> = ({
   children,
 }) => {
@@ -219,7 +221,14 @@ export const DrawingProvider: React.FC<{ children: ReactNode }> = ({
     const canvas = canvasRef.current;
     if (!canvas) return;
 
-    const ctx = canvas.getContext("2d");
+    if (!contextMap[data.userId]) {
+      const ctx = canvas.getContext("2d");
+      if (ctx) {
+        contextMap[data.userId] = ctx;
+      }
+    }
+
+    const ctx = contextMap[data.userId];
     if (!ctx) return;
 
     ctx.lineWidth = data.strokeSize;
@@ -233,7 +242,6 @@ export const DrawingProvider: React.FC<{ children: ReactNode }> = ({
       ctx.stroke();
     } else if (data.type === "end") {
       ctx.closePath();
-      debouncedSaveDrawing();
     }
   };
 
@@ -255,7 +263,14 @@ export const DrawingProvider: React.FC<{ children: ReactNode }> = ({
     if (!socket || !canvasRef.current) return;
 
     const canvas = canvasRef.current;
-    const ctx = canvas.getContext("2d");
+    if (!contextMap[user!.id]) {
+      const ctx = canvas.getContext("2d");
+      if (ctx) {
+        contextMap[user!.id] = ctx;
+      }
+    }
+
+    const ctx = contextMap[user!.id];
     if (ctx) {
       ctx.fillStyle = "#fbfff1";
       ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -311,7 +326,14 @@ export const DrawingProvider: React.FC<{ children: ReactNode }> = ({
     event.preventDefault();
 
     const canvas = canvasRef.current;
-    const ctx = canvas.getContext("2d");
+    if (!contextMap[user!.id]) {
+      const ctx = canvas.getContext("2d");
+      if (ctx) {
+        contextMap[user!.id] = ctx;
+      }
+    }
+
+    const ctx = contextMap[user!.id];
     if (ctx) {
       setIsDrawing(true);
       const { x, y } = getTouchPosition(event);
@@ -338,7 +360,14 @@ export const DrawingProvider: React.FC<{ children: ReactNode }> = ({
     event.preventDefault();
 
     const canvas = canvasRef.current;
-    const ctx = canvas.getContext("2d");
+    if (!contextMap[user!.id]) {
+      const ctx = canvas.getContext("2d");
+      if (ctx) {
+        contextMap[user!.id] = ctx;
+      }
+    }
+
+    const ctx = contextMap[user!.id];
     if (ctx) {
       const { x, y } = getTouchPosition(event);
 
@@ -391,7 +420,14 @@ export const DrawingProvider: React.FC<{ children: ReactNode }> = ({
     if (!socket || !canvasRef.current) return;
 
     const canvas = canvasRef.current;
-    const ctx = canvas.getContext("2d");
+    if (!contextMap[user!.id]) {
+      const ctx = canvas.getContext("2d");
+      if (ctx) {
+        contextMap[user!.id] = ctx;
+      }
+    }
+
+    const ctx = contextMap[user!.id];
     if (ctx) {
       setIsDrawing(true);
       const { clientX, clientY } = event;
@@ -416,7 +452,14 @@ export const DrawingProvider: React.FC<{ children: ReactNode }> = ({
     if (!isDrawing || !socket || !canvasRef.current) return;
 
     const canvas = canvasRef.current;
-    const ctx = canvas.getContext("2d");
+    if (!contextMap[user!.id]) {
+      const ctx = canvas.getContext("2d");
+      if (ctx) {
+        contextMap[user!.id] = ctx;
+      }
+    }
+
+    const ctx = contextMap[user!.id];
     if (ctx) {
       const { clientX, clientY } = event;
 
@@ -475,8 +518,11 @@ export const DrawingProvider: React.FC<{ children: ReactNode }> = ({
     setUserDrawings(null);
     setStrokes([]);
     setRedoStack([]);
-
     socket.emit("clearCanvas");
+
+    Object.keys(contextMap).forEach((key) => {
+      contextMap[key] = null;
+    });
   };
 
   const downloadCanvas = async () => {
