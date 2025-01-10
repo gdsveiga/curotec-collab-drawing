@@ -1,17 +1,19 @@
 import mongoose, { Document, Schema, Model } from "mongoose";
 
-interface IStroke {
+export interface IStroke {
   x: number;
   y: number;
   type: "begin" | "draw" | "end";
   strokeSize: number;
   strokeColor: string;
   userId: string;
+  id?: string;
 }
 
 export interface IDrawing extends Document {
   strokes: IStroke[];
   createdAt: Date;
+  userId: string;
 }
 
 const strokeSchema = new Schema<IStroke>({
@@ -20,12 +22,12 @@ const strokeSchema = new Schema<IStroke>({
   type: { type: String, enum: ["begin", "draw", "end"], required: true },
   strokeSize: { type: Number, required: true },
   strokeColor: { type: String, required: true },
-  userId: { type: String, required: true },
 });
 
 const drawingSchema = new Schema<IDrawing>({
   strokes: [strokeSchema],
   createdAt: { type: Date, default: Date.now },
+  userId: { type: String, required: true },
 });
 
 const Drawing: Model<IDrawing> = mongoose.model<IDrawing>(
